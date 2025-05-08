@@ -1,0 +1,161 @@
+/* Page background color */
+.page {
+    background-color: #4A4A4A; /* Set the page background color */
+    min-height: 100vh; /* Ensure it covers the full viewport height */
+    margin: 0;
+    padding: 0;
+}
+
+/* Header styling */
+.header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 125px; /* Fixed height */
+    width: 100%; /* Fixed width */
+    background-color: #535353;
+    color: black;
+    font-size: xx-large;
+    box-shadow: 0px 4px 6px rgba(174, 174, 174, 0.53);
+}
+
+/* EventList and AddAEvent background color */
+.EventList, .addAEvent {
+    background-color: #8E8E8E; /* Set the background color for these sections */
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Specific EventList styling */
+.EventList {
+    position: absolute;
+    left: 10px; /* Position the EventList */
+    height: 800px; /* Set height */
+    overflow-y: scroll; /* Enable vertical scrolling */
+    overflow-x: hidden; /* Hide horizontal overflow */
+    width: 325px; /* Set width */
+    max-width: none; /* Disable shared max-width */
+}
+
+/* Section headings */
+.EventList h2, .addAEvent h2 {
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+/* Remove list styling */
+.EventList ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Event list items */
+.EventList li {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.EventList li:last-child {
+    border-bottom: none;
+}
+
+/* Event content: details and remove button */
+.eventContent {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+/* Event details */
+.eventDetails {
+    flex-grow: 1;
+    cursor: pointer;
+}
+
+/* Event description */
+.eventDescription {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #555;
+    max-width: 600px; /* Set a maximum width for the description */
+    word-wrap: break-word; /* Ensure long words break to fit within the max width */
+}
+
+/* Remove button */
+.removeButton {
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    background: #ff4d4d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.removeButton:hover {
+    background: #cc0000;
+}
+
+/* Add event form inputs */
+.addAEvent input {
+    display: block;
+    width: calc(100% - 20px);
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* Add event form button */
+.addAEvent button {
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.addAEvent button:hover {
+    background: #0056b3;
+}
+
+/* AddAEvent positioning */
+.addAEvent {
+    position: absolute;
+    left: 400px;
+    top: 125px; /* Adjusted to fit below EventList */
+    width: 200px; /* Ensure this width is applied */
+    max-width: none; /* Disable the shared max-width */
+}
+
+/* Media query for screens smaller than 750px */
+@media screen and (max-width: 750px) {
+    .page {
+        display: flex;
+        flex-direction: column; /* Stack everything vertically */
+        align-items: center; /* Center align items */
+    }
+
+    .EventList, .addAEvent {
+        position: static; /* Remove absolute positioning */
+        width: 90%; /* Make the sections take up most of the screen width */
+        margin: 10px 0; /* Add spacing between sections */
+        height: auto; /* Adjust height to fit content */
+    }
+
+    .EventList {
+        overflow-y: visible; /* Disable scrolling for smaller screens */
+    }
+}
