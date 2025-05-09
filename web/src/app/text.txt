@@ -141,22 +141,6 @@ export default function Home() {
       })
       .catch((error) => console.error("Error adding event:", error));
   };
-    // Remove an event by ID
-    const handleRemoveEvent = (id: number) => {
-      fetch(`http://localhost:3003/removeEvent/${id}`, {
-        method: "DELETE",
-      })
-        .then((response) => {
-          if (response.ok) {
-            return fetch("http://localhost:3003/getEvents")
-              .then((res) => res.json())
-              .then((data) => setEvents(data));
-          } else {
-            alert("Failed to remove event");
-          }
-        })
-        .catch((error) => console.error("Error removing event:", error));
-    };
 
   // Toggle the description visibility for an event
   const toggleDescription = (id: number) => {
@@ -188,12 +172,6 @@ export default function Home() {
                 >
                   <strong>{event.eventLocation}</strong> - {event.eventTime}
                 </div>
-                <button
-                  onClick={() => handleRemoveEvent(event.id)}
-                  className={styles.removeButton}
-                >
-                  Remove
-                </button>
               </div>
               {expandedEventId === event.id && (
                 <p className={styles.eventDescription}>{event.eventDescription}</p>
@@ -277,3 +255,48 @@ export default function Home() {
     </div>
   );
 }
+
+
+<div className={styles.EventList}>
+        <h2>Event List</h2>
+        <ul>
+          {events.map((event: any) => (
+            <li key={event.id} className={styles.eventItem}>
+              <div className={styles.eventContent}>
+                <div
+                  onClick={() => toggleDescription(event.id)}
+                  className={styles.eventDetails}
+                >
+                  <strong>{event.eventLocation}</strong> - {event.eventTime}
+                </div>
+                <button
+                  onClick={() => handleRemoveEvent(event.id)}
+                  className={styles.removeButton}
+                >
+                  Remove
+                </button>
+              </div>
+              {expandedEventId === event.id && (
+                <p className={styles.eventDescription}>{event.eventDescription}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+        // Remove an event by ID
+  const handleRemoveEvent = (id: number) => {
+    fetch(`http://localhost:3003/removeEvent/${id}`, {
+      method: "DELETE",
+    })
+      .then((response) => {
+        if (response.ok) {
+          return fetch("http://localhost:3003/getEvents")
+            .then((res) => res.json())
+            .then((data) => setEvents(data));
+        } else {
+          alert("Failed to remove event");
+        }
+      })
+      .catch((error) => console.error("Error removing event:", error));
+  };
