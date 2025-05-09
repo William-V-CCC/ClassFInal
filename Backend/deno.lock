@@ -462,6 +462,16 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1"
-    ]
+    ],
+    "packageJson": {
+      "dependencies": [
+        "npm:cors@^2.8.5",
+        "npm:dotenv@^16.5.0",
+        "npm:ethers@^6.14.0",
+        "npm:express@^5.1.0",
+        "npm:fs@^0.0.1-security",
+        "npm:mysql2@^3.14.1"
+      ]
+    }
   }
 }

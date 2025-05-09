@@ -1,23 +1,118 @@
-"use client"
+"use client";
 import { useState, useEffect } from "react";
 import styles from "./page.module.css";
 
+// Extend the Window interface to include the ethereum property
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 export default function Home() {
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [newAdminName, setNewAdminName] = useState("");
+
   const [events, setEvents] = useState([]);
   const [newEvent, setNewEvent] = useState({
     eventLocation: "",
     eventDescription: "",
     eventTime: "",
   });
-  const [expandedEventId, setExpandedEventId] = useState<number | null>(null); // Track which event is expanded
+  const [expandedEventId, setExpandedEventId] = useState<number | null>(null);
+  const [newAdminWallet, setNewAdminWallet] = useState("");
+  const [removeAdminWallet, setRemoveAdminWallet] = useState("");
+  const [admins, setAdmins] = useState([]);
 
-  // Fetch events from the backend
+  // Prompt MetaMask connection and verify admin status
   useEffect(() => {
+    const connectWallet = async () => {
+      if (typeof window.ethereum !== "undefined") {
+        try {
+          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          const wallet = accounts[0];
+          setWalletAddress(wallet);
+
+          // Check if the wallet is an admin
+          const res = await fetch(`http://localhost:3003/isAdmin/${wallet}`);
+          const data = await res.json();
+          if (data.isAdmin) {
+            setIsAdmin(true);
+          } else {
+            alert("Access denied: You are not an admin.");
+          }
+        } catch (err) {
+          alert("MetaMask connection failed.");
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        alert("MetaMask not detected. Please install MetaMask.");
+        setLoading(false);
+      }
+    };
+
+    connectWallet();
+  }, []);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetch("http://localhost:3003/getAdmin")
+      .then((response) => response.json())
+      .then((data) => setAdmins(data))
+      .catch((error) => console.error("Error fetching admins:", error));
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
     fetch("http://localhost:3003/getEvents")
       .then((response) => response.json())
       .then((data) => setEvents(data))
       .catch((error) => console.error("Error fetching events:", error));
-  }, []);
+  }, [isAdmin]);
+
+  // Handle adding an admin
+  const handleAddAdmin = () => {
+    fetch("http://localhost:3003/addAdmin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ 
+        adminWallets: newAdminWallet,
+        adminName: newAdminName // Sending the adminName as well
+      }),
+    })
+      .then((res) => {
+        if (res.ok) {
+          alert("Admin added successfully");
+          setNewAdminWallet("");
+          setNewAdminName(""); // Clear the name input after successful add
+        } else {
+          alert("Failed to add admin");
+        }
+      })
+      .catch((error) => console.error("Error adding admin:", error));
+  };
+
+  // Handle removing an admin
+  const handleRemoveAdmin = () => {
+    fetch(`http://localhost:3003/removeAdmin/${removeAdminWallet}`, {
+      method: "DELETE",
+    })
+      .then((res) => {
+        if (res.ok) {
+          alert("Admin removed successfully");
+          setRemoveAdminWallet("");
+        } else {
+          alert("Failed to remove admin");
+        }
+      })
+      .catch((error) => console.error("Error removing admin:", error));
+  };
 
   // Handle input changes for the new event
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,10 +131,7 @@ export default function Home() {
     })
       .then((response) => {
         if (response.ok) {
-          
-        
           setNewEvent({ eventLocation: "", eventDescription: "", eventTime: "" });
-          // Refresh the event list
           return fetch("http://localhost:3003/getEvents")
             .then((res) => res.json())
             .then((data) => setEvents(data));
@@ -50,31 +142,20 @@ export default function Home() {
       .catch((error) => console.error("Error adding event:", error));
   };
 
-  // Remove an event by ID
-  const handleRemoveEvent = (id: number) => {
-    fetch(`http://localhost:3003/removeEvent/${id}`, {
-      method: "DELETE",
-    })
-      .then((response) => {
-        if (response.ok) {
-          // Refresh the event list
-          return fetch("http://localhost:3003/getEvents")
-            .then((res) => res.json())
-            .then((data) => setEvents(data));
-        } else {
-          alert("Failed to remove event");
-        }
-      })
-      .catch((error) => console.error("Error removing event:", error));
-  };
-
   // Toggle the description visibility for an event
   const toggleDescription = (id: number) => {
     setExpandedEventId((prevId) => (prevId === id ? null : id));
   };
 
+  // Loading state while checking wallet and admin status
+  if (loading) return <div>Loading...</div>;
+
+  // Deny access if not an admin
+  if (!isAdmin) return <div>Access denied: You are not an admin.</div>;
+
   return (
     <div className={styles.page}>
+      <img src="/Nut.png" alt="Coconut" className={styles.coconutImage} />
       <div className={styles.header}>
         <h1>Admin Panel</h1>
       </div>
@@ -85,15 +166,12 @@ export default function Home() {
           {events.map((event: any) => (
             <li key={event.id} className={styles.eventItem}>
               <div className={styles.eventContent}>
-                <div onClick={() => toggleDescription(event.id)} className={styles.eventDetails}>
+                <div
+                  onClick={() => toggleDescription(event.id)}
+                  className={styles.eventDetails}
+                >
                   <strong>{event.eventLocation}</strong> - {event.eventTime}
                 </div>
-                <button
-                  onClick={() => handleRemoveEvent(event.id)}
-                  className={styles.removeButton}
-                >
-                  Remove
-                </button>
               </div>
               {expandedEventId === event.id && (
                 <p className={styles.eventDescription}>{event.eventDescription}</p>
@@ -130,6 +208,49 @@ export default function Home() {
           onChange={handleInputChange}
         />
         <button onClick={handleAddEvent}>Submit</button>
+      </div>
+
+      <div className={styles.addAdminSection}>
+        <h2>Add Admin</h2>
+        <input
+          type="text"
+          placeholder="Admin Name"
+          autoComplete="off"
+          value={newAdminName}
+          onChange={(e) => setNewAdminName(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Admin Wallet Address"
+          autoComplete="off"
+          value={newAdminWallet}
+          onChange={(e) => setNewAdminWallet(e.target.value)}
+        />
+        <button onClick={handleAddAdmin}>Add Admin</button>
+      </div>
+
+      {/* Remove Admin Wallet Form */}
+      <div className={styles.removeAdminSection}>
+        <h2>Remove Admin Wallet</h2>
+        <input
+          type="text"
+          placeholder="Admin Wallet Address"
+          autoComplete="off"
+          value={removeAdminWallet}
+          onChange={(e) => setRemoveAdminWallet(e.target.value)}
+        />
+        <button onClick={handleRemoveAdmin}>Remove Admin</button>
+      </div>
+
+      <div className={styles.adminListSection}>
+        <h2>Current Admins</h2>
+        <ul>
+          {admins.map((admin: any, index) => (
+            <li key={index}>
+              <strong>{admin.adminName}</strong> - {admin.adminWallets}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
