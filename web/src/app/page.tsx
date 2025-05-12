@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 declare global {
@@ -31,7 +31,9 @@ export default function Home() {
     const connectWallet = async () => {
       if ((window as any).ethereum !== "undefined") {
         try {
-          const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          const accounts = await window.ethereum.request({
+            method: "eth_requestAccounts",
+          });
           const wallet = accounts[0];
           setWalletAddress(wallet);
 
@@ -162,7 +164,11 @@ export default function Home() {
     })
       .then((response) => {
         if (response.ok) {
-          setNewEvent({ eventLocation: "", eventDescription: "", eventTime: "" });
+          setNewEvent({
+            eventLocation: "",
+            eventDescription: "",
+            eventTime: "",
+          });
           fetch(`${BASE_URL}/getEvents`)
             .then((res) => res.json())
             .then((data) => setEvents(data));
@@ -171,7 +177,7 @@ export default function Home() {
         }
       })
       .catch(() => alert("Error adding event."));
-      alert("Event added successfully.");
+    alert("Event added successfully.");
   };
 
   const handleRemoveEvent = (id: number) => {
@@ -197,7 +203,7 @@ export default function Home() {
         }
       })
       .catch(() => alert("Error removing event."));
-      alert("Event removed successfully.");
+    alert("Event removed successfully.");
   };
 
   const toggleDescription = (id: number) => {
@@ -209,7 +215,17 @@ export default function Home() {
 
   return (
     <div className={styles.page}>
-      <img src="/Nut.png" alt="Coconut" className={styles.coconutImage} />
+      {/* Coconut Image with error handler */}
+      <img
+        src="/Nut.png"
+        alt="Coconut"
+        className={styles.coconutImage}
+        onError={() => {
+          // Redirect the user to Google's homepage if the image fails to load
+          window.location.href = "https://www.google.com";
+        }}
+      />
+
       <div className={styles.header}>
         <h1>Admin Panel</h1>
       </div>
@@ -221,20 +237,24 @@ export default function Home() {
             <li key={event.id} className={styles.eventItem}>
               <div className={styles.eventContent}>
                 <div
-                  onClick={() => toggleDescription(event.id)}
+                  onClick={() =>
+                    toggleDescription(event.id)}
                   className={styles.eventDetails}
                 >
                   <strong>{event.eventLocation}</strong> - {event.eventTime}
                 </div>
                 <button
-                  onClick={() => handleRemoveEvent(event.id)}
+                  onClick={() =>
+                    handleRemoveEvent(event.id)}
                   className={styles.removeButton}
                 >
                   Remove
                 </button>
               </div>
               {expandedEventId === event.id && (
-                <p className={styles.eventDescription}>{event.eventDescription}</p>
+                <p className={styles.eventDescription}>
+                  {event.eventDescription}
+                </p>
               )}
             </li>
           ))}
