@@ -76,21 +76,27 @@ export default function Home() {
 
   // Handle adding an admin
   const handleAddAdmin = () => {
+    if (!walletAddress) {
+      alert("Please connect your wallet first.");
+      return;
+    }
+
     fetch("http://localhost:3003/addAdmin", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         adminWallets: newAdminWallet,
-        adminName: newAdminName // Sending the adminName as well
+        adminName: newAdminName,
+        requesterWallet: walletAddress,
       }),
     })
       .then((res) => {
         if (res.ok) {
           alert("Admin added successfully");
           setNewAdminWallet("");
-          setNewAdminName(""); // Clear the name input after successful add
+          setNewAdminName("");
         } else {
           alert("Failed to add admin");
         }
@@ -99,9 +105,32 @@ export default function Home() {
   };
 
   // Handle removing an admin
-  const handleRemoveAdmin = () => {
+  const handleRemoveAdmin = async () => {
+    if (!walletAddress) {
+      alert("Please connect your wallet first.");
+      return;
+    }
+
+    if (!removeAdminWallet) {
+      alert("Please provide the admin wallet address to remove.");
+      return;
+    }
+
+    const confirmRes = await fetch(`http://localhost:3003/confirmAdmin/${walletAddress}`);
+    const confirmData = await confirmRes.json();
+    if (!confirmData.isAdmin) {
+      alert("You are not authorized to remove an admin.");
+      return;
+    }
+
     fetch(`http://localhost:3003/removeAdmin/${removeAdminWallet}`, {
       method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requesterWallet: walletAddress,
+      }),
     })
       .then((res) => {
         if (res.ok) {
@@ -122,12 +151,22 @@ export default function Home() {
 
   // Submit a new event to the backend
   const handleAddEvent = () => {
+    if (!walletAddress) {
+      alert("Please connect your wallet first.");
+      return;
+    }
+
+    const eventWithAdmin = {
+      ...newEvent,
+      adminWallet: walletAddress,
+    };
+
     fetch("http://localhost:3003/addEvent", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(newEvent),
+      body: JSON.stringify(eventWithAdmin),
     })
       .then((response) => {
         if (response.ok) {
@@ -141,32 +180,41 @@ export default function Home() {
       })
       .catch((error) => console.error("Error adding event:", error));
   };
-    // Remove an event by ID
-    const handleRemoveEvent = (id: number) => {
-      fetch(`http://localhost:3003/removeEvent/${id}`, {
-        method: "DELETE",
+
+  // Remove an event by ID
+  const handleRemoveEvent = (id: number) => {
+    if (!walletAddress) {
+      alert("Please connect your wallet first.");
+      return;
+    }
+
+    fetch(`http://localhost:3003/removeEvent/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requesterWallet: walletAddress,
+      }),
+    })
+      .then((response) => {
+        if (response.ok) {
+          return fetch("http://localhost:3003/getEvents")
+            .then((res) => res.json())
+            .then((data) => setEvents(data));
+        } else {
+          alert("Failed to remove event");
+        }
       })
-        .then((response) => {
-          if (response.ok) {
-            return fetch("http://localhost:3003/getEvents")
-              .then((res) => res.json())
-              .then((data) => setEvents(data));
-          } else {
-            alert("Failed to remove event");
-          }
-        })
-        .catch((error) => console.error("Error removing event:", error));
-    };
+      .catch((error) => console.error("Error removing event:", error));
+  };
 
   // Toggle the description visibility for an event
   const toggleDescription = (id: number) => {
     setExpandedEventId((prevId) => (prevId === id ? null : id));
   };
 
-  // Loading state while checking wallet and admin status
   if (loading) return <div>Loading...</div>;
-
-  // Deny access if not an admin
   if (!isAdmin) return <div>Access denied: You are not an admin.</div>;
 
   return (
@@ -251,7 +299,6 @@ export default function Home() {
         <button onClick={handleAddAdmin}>Add Admin</button>
       </div>
 
-      {/* Remove Admin Wallet Form */}
       <div className={styles.removeAdminSection}>
         <h2>Remove Admin Wallet</h2>
         <input
