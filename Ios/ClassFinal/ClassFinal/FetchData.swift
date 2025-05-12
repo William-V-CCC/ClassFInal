@@ -29,7 +29,7 @@ class DataLoader: ObservableObject {
     }
     
     func getResult() async throws {
-        let url = URL(string: "http://localhost:3003/getEvents")!
+        let url = URL(string: "http://10.200.144.145:3003/getEvents")!
         
         do {
             print("[DataLoader] Fetching data from: \(url)")

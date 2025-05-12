@@ -6,7 +6,7 @@ dotenv.config();
 
 const router = express.Router();
 const CONTRACT_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
-const provider = new ethers.JsonRpcProvider('http://localhost:8545');
+const provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
 
 const AdminsArtifact = JSON.parse(readFileSync('../Hardhat/artifacts/contracts/FinalProj.sol/Admins.json', 'utf-8'));
 const adminsContract = new ethers.Contract(CONTRACT_ADDRESS, AdminsArtifact.abi, provider);

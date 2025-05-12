@@ -32,47 +32,52 @@ router.delete('/:wallet', async (req, res) => {
     return res.status(400).send('Invalid or missing requester wallet');
   }
 
-  // Check if the requesterWallet is an admin
-  const resAdminCheck = await fetch(`http://localhost:3003/isAdmin/${requesterWallet}`);
-  const dataAdminCheck = await resAdminCheck.json();
-  if (!dataAdminCheck.isAdmin) {
-    console.error('Requester is not an admin');
-    return res.status(403).send('Requester is not an admin');
-  }
-
-  // Check if the admin being removed has the adminName of "Owner"
-  connection.query('SELECT adminName FROM Admins WHERE adminWallets = ?', [wallet], (err, results) => {
+  // Check if the requesterWallet corresponds to the admin with adminName "Owner"
+  connection.query('SELECT adminName FROM Admins WHERE adminWallets = ?', [requesterWallet], (err, results) => {
     if (err) {
-      console.error('Error querying adminName:', err);
-      return res.status(500).send('Error querying adminName');
+      console.error('Error querying adminName for requesterWallet:', err);
+      return res.status(500).send('Error verifying requester adminName');
     }
 
-    if (results.length > 0 && results[0].adminName === 'Owner') {
-      console.error('Cannot remove admin with adminName "Owner"');
-      return res.status(403).send('Cannot remove admin with adminName "Owner"');
+    if (results.length === 0 || results[0].adminName !== 'Owner') {
+      console.error('Requester is not the admin with adminName "Owner"');
+      return res.status(403).send('Only the admin with adminName "Owner" can perform this action');
     }
 
-    // Proceed to remove the admin
-    try {
-      console.log(`Calling removeAdmin function on smart contract with wallet: ${wallet}`);
-      adminsContract.removeAdmin(wallet).then(async (tx) => {
-        console.log('Transaction sent, waiting for confirmation...');
-        await tx.wait();
-        console.log('Transaction confirmed, removing admin from database');
+    // Check if the admin being removed has the adminName of "Owner"
+    connection.query('SELECT adminName FROM Admins WHERE adminWallets = ?', [wallet], (err, results) => {
+      if (err) {
+        console.error('Error querying adminName:', err);
+        return res.status(500).send('Error querying adminName');
+      }
 
-        connection.query('DELETE FROM Admins WHERE adminWallets = ?', [wallet], (err) => {
-          if (err) {
-            console.error('Error removing admin from database:', err);
-            return res.status(500).send('Error removing admin from database');
-          }
-          console.log('Admin removed from database successfully');
-          res.send('Admin removed successfully');
+      if (results.length > 0 && results[0].adminName === 'Owner') {
+        console.error('Cannot remove admin with adminName "Owner"');
+        return res.status(403).send('Cannot remove admin with adminName "Owner"');
+      }
+
+      // Proceed to remove the admin
+      try {
+        console.log(`Calling removeAdmin function on smart contract with wallet: ${wallet}`);
+        adminsContract.removeAdmin(wallet).then(async (tx) => {
+          console.log('Transaction sent, waiting for confirmation...');
+          await tx.wait();
+          console.log('Transaction confirmed, removing admin from database');
+
+          connection.query('DELETE FROM Admins WHERE adminWallets = ?', [wallet], (err) => {
+            if (err) {
+              console.error('Error removing admin from database:', err);
+              return res.status(500).send('Error removing admin from database');
+            }
+            console.log('Admin removed from database successfully');
+            res.send('Admin removed successfully');
+          });
         });
-      });
-    } catch (error) {
-      console.error('Error removing admin from contract or database:', error);
-      res.status(500).send('Error removing admin');
-    }
+      } catch (error) {
+        console.error('Error removing admin from contract or database:', error);
+        res.status(500).send('Error removing admin');
+      }
+    });
   });
 });
 

@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import styles from "./page.module.css";
 
-// Extend the Window interface to include the ethereum property
 declare global {
   interface Window {
     ethereum?: any;
@@ -26,26 +25,21 @@ export default function Home() {
   const [removeAdminWallet, setRemoveAdminWallet] = useState("");
   const [admins, setAdmins] = useState([]);
 
-  // Prompt MetaMask connection and verify admin status
+  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
   useEffect(() => {
     const connectWallet = async () => {
-      if (typeof window.ethereum !== "undefined") {
+      if ((window as any).ethereum !== "undefined") {
         try {
           const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
           const wallet = accounts[0];
           setWalletAddress(wallet);
 
-          // Check if the wallet is an admin
-          const res = await fetch(`http://localhost:3003/isAdmin/${wallet}`);
+          const res = await fetch(`${BASE_URL}/isAdmin/${wallet}`);
           const data = await res.json();
-          if (data.isAdmin) {
-            setIsAdmin(true);
-          } else {
-            alert("Access denied: You are not an admin.");
-          }
+          setIsAdmin(data.isAdmin);
         } catch (err) {
-          alert("MetaMask connection failed.");
-          console.error(err);
+          alert("Failed to connect to MetaMask.");
         } finally {
           setLoading(false);
         }
@@ -56,55 +50,56 @@ export default function Home() {
     };
 
     connectWallet();
-  }, []);
+  }, [BASE_URL]);
 
   useEffect(() => {
     if (!isAdmin) return;
-    fetch("http://localhost:3003/getAdmin")
+    fetch(`${BASE_URL}/getAdmin`)
       .then((response) => response.json())
       .then((data) => setAdmins(data))
-      .catch((error) => console.error("Error fetching admins:", error));
-  }, [isAdmin]);
+      .catch(() => alert("Error fetching admins."));
+  }, [isAdmin, BASE_URL]);
 
   useEffect(() => {
     if (!isAdmin) return;
-    fetch("http://localhost:3003/getEvents")
+    fetch(`${BASE_URL}/getEvents`)
       .then((response) => response.json())
       .then((data) => setEvents(data))
-      .catch((error) => console.error("Error fetching events:", error));
-  }, [isAdmin]);
+      .catch(() => alert("Error fetching events."));
+  }, [isAdmin, BASE_URL]);
 
-  // Handle adding an admin
   const handleAddAdmin = () => {
     if (!walletAddress) {
       alert("Please connect your wallet first.");
       return;
     }
 
-    fetch("http://localhost:3003/addAdmin", {
+    const payload = {
+      adminWallets: newAdminWallet,
+      adminName: newAdminName,
+      requesterWallet: walletAddress,
+    };
+
+    fetch(`${BASE_URL}/addAdmin`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        adminWallets: newAdminWallet,
-        adminName: newAdminName,
-        requesterWallet: walletAddress,
-      }),
+      body: JSON.stringify(payload),
     })
-      .then((res) => {
+      .then(async (res) => {
         if (res.ok) {
-          alert("Admin added successfully");
+          alert("Admin added successfully.");
           setNewAdminWallet("");
           setNewAdminName("");
         } else {
-          alert("Failed to add admin");
+          const errorMsg = await res.text();
+          alert(`Failed to add admin: ${errorMsg}`);
         }
       })
-      .catch((error) => console.error("Error adding admin:", error));
+      .catch(() => alert("Error adding admin."));
   };
 
-  // Handle removing an admin
   const handleRemoveAdmin = async () => {
     if (!walletAddress) {
       alert("Please connect your wallet first.");
@@ -112,44 +107,41 @@ export default function Home() {
     }
 
     if (!removeAdminWallet) {
-      alert("Please provide the admin wallet address to remove.");
+      alert("Please provide a wallet address to remove.");
       return;
     }
 
-    const confirmRes = await fetch(`http://localhost:3003/confirmAdmin/${walletAddress}`);
+    const confirmRes = await fetch(`${BASE_URL}/confirmAdmin/${walletAddress}`);
     const confirmData = await confirmRes.json();
+
     if (!confirmData.isAdmin) {
       alert("You are not authorized to remove an admin.");
       return;
     }
 
-    fetch(`http://localhost:3003/removeAdmin/${removeAdminWallet}`, {
+    fetch(`${BASE_URL}/removeAdmin/${removeAdminWallet}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        requesterWallet: walletAddress,
-      }),
+      body: JSON.stringify({ requesterWallet: walletAddress }),
     })
       .then((res) => {
         if (res.ok) {
-          alert("Admin removed successfully");
+          alert("Admin removed successfully.");
           setRemoveAdminWallet("");
         } else {
-          alert("Failed to remove admin");
+          alert("Failed to remove admin.");
         }
       })
-      .catch((error) => console.error("Error removing admin:", error));
+      .catch(() => alert("Error removing admin."));
   };
 
-  // Handle input changes for the new event
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setNewEvent((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Submit a new event to the backend
   const handleAddEvent = () => {
     if (!walletAddress) {
       alert("Please connect your wallet first.");
@@ -161,7 +153,7 @@ export default function Home() {
       adminWallet: walletAddress,
     };
 
-    fetch("http://localhost:3003/addEvent", {
+    fetch(`${BASE_URL}/addEvent`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -171,45 +163,43 @@ export default function Home() {
       .then((response) => {
         if (response.ok) {
           setNewEvent({ eventLocation: "", eventDescription: "", eventTime: "" });
-          return fetch("http://localhost:3003/getEvents")
+          fetch(`${BASE_URL}/getEvents`)
             .then((res) => res.json())
             .then((data) => setEvents(data));
         } else {
-          alert("Failed to add event");
+          alert("Failed to add event.");
         }
       })
-      .catch((error) => console.error("Error adding event:", error));
+      .catch(() => alert("Error adding event."));
+      alert("Event added successfully.");
   };
 
-  // Remove an event by ID
   const handleRemoveEvent = (id: number) => {
     if (!walletAddress) {
       alert("Please connect your wallet first.");
       return;
     }
 
-    fetch(`http://localhost:3003/removeEvent/${id}`, {
+    fetch(`${BASE_URL}/removeEvent/${id}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        requesterWallet: walletAddress,
-      }),
+      body: JSON.stringify({ requesterWallet: walletAddress }),
     })
       .then((response) => {
         if (response.ok) {
-          return fetch("http://localhost:3003/getEvents")
+          fetch(`${BASE_URL}/getEvents`)
             .then((res) => res.json())
             .then((data) => setEvents(data));
         } else {
-          alert("Failed to remove event");
+          alert("Failed to remove event.");
         }
       })
-      .catch((error) => console.error("Error removing event:", error));
+      .catch(() => alert("Error removing event."));
+      alert("Event removed successfully.");
   };
 
-  // Toggle the description visibility for an event
   const toggleDescription = (id: number) => {
     setExpandedEventId((prevId) => (prevId === id ? null : id));
   };

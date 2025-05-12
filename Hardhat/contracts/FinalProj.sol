@@ -7,6 +7,7 @@ contract Admins is Ownable {
     struct Admin {
         uint256 id;
         bool exists;
+        string adminName;
     }
 
     // SHA256(wallet) => Admin
@@ -16,7 +17,7 @@ contract Admins is Ownable {
     uint256 private nextAdminId = 1;
 
     // Core Events
-    event AdminAdded(bytes32 indexed walletHash, uint256 id);
+    event AdminAdded(bytes32 indexed walletHash, uint256 id, string adminName);
     event AdminRemoved(bytes32 indexed walletHash, uint256 id);
 
     // Debug/Trace Events
@@ -29,13 +30,22 @@ contract Admins is Ownable {
     event DebugRemoveAttempt(address wallet, bool existsBefore);
     event DebugCurrentIdCounter(uint256 nextAdminId);
 
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) {
+        // Set the initial admin as the deployer's address (msg.sender)
+        address initialAdmin = msg.sender;
+        bytes32 walletHash = _hash(initialAdmin);
+
+        // Add the deployer as the "Owner" admin with ID 0
+        require(!admins[walletHash].exists, "Initial admin already set");
+        admins[walletHash] = Admin({id: 0, exists: true, adminName: "Owner"});
+        emit AdminAdded(walletHash, 0, "Owner");
+    }
 
     function _hash(address wallet) internal pure returns (bytes32) {
         return sha256(abi.encodePacked(wallet));
     }
 
-    function addAdmin(address wallet) external onlyOwner {
+    function addAdmin(address wallet, string calldata adminName) external {
         require(wallet != address(0), "Invalid address");
 
         bytes32 walletHash = _hash(wallet);
@@ -44,8 +54,12 @@ contract Admins is Ownable {
 
         require(!admins[walletHash].exists, "Admin already exists");
 
-        admins[walletHash] = Admin({id: nextAdminId, exists: true});
-        emit AdminAdded(walletHash, nextAdminId);
+        admins[walletHash] = Admin({
+            id: nextAdminId,
+            exists: true,
+            adminName: adminName
+        });
+        emit AdminAdded(walletHash, nextAdminId, adminName);
 
         nextAdminId++;
         emit DebugCurrentIdCounter(nextAdminId);
